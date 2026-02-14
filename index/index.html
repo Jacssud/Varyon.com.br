@@ -1,60 +1,112 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Varyon.com.br</title>
+    <title>VARYON - Shop. Share. Earn.</title>
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
-    <header>
-        <div class="logo">
-            <img src="img/logo.png" alt="Varyon.com.br">
-        </div>
-        <div class="menu">
-            <ul>
-                <li><a href="#">Menu</a></li>
-                <li><a href="#">Store</a></li>
-                <li><a href="#">about</a></li>
-            </ul>
-        </div>
-        <div class="search">
-            <input type="text" placeholder="Buscar">
-            <button><img src="img/search.png" alt="Buscar"></button>
-        </div>
-        <div class="user">
-            <img src="img/user.png" alt="Usuario">
-            <button>Login</button>
-        </div>
-        <div class="register">
-            <img src="img/register.png" alt="Registrarse">
-            <button>Registrarse</button>
-        </div>
-        <div class="login">
-            <img src="img/login.png" alt="Login">
-            <button>Login</button>
-        </div>
-        <div class="logout">
-            <img src="img/logout.png" alt="Logout">
-            <button>Logout</button>
-        </div>
-    </header>
-    <main>
-        <div class="banner">
-            <img src="img/banner.png" alt="Banner">
-        </div>
-        <div class="products">
-            <div class="product">
-                <img src="img/product1.png" alt="Producto 1">
+    <header class="navbar">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="4" fill="#0a0a0a"/>
+                    <path d="M20 8L28 14V26L20 32L12 26V14L20 8Z" fill="url(#pin-grad)"/>
+                    <path d="M20 14L24 17V23L20 26L16 23V17L20 14Z" fill="#fff"/>
+                    <text x="20" y="22" text-anchor="middle" fill="#0a0a0a" font-size="8" font-weight="bold" font-family="sans-serif">V</text>
+                    <defs>
+                        <linearGradient id="pin-grad" x1="12" y1="8" x2="28" y2="32" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#ff8c00"/>
+                            <stop offset="1" stop-color="#8b5cf6"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="logo-text">
+                <span class="logo-name">VARYON</span>
+                <span class="logo-tagline">-SHOP.SHARE.EARN-</span>
             </div>
         </div>
-        <div class="video">
-            <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" frameborder="0"></iframe>
+        <nav class="nav-links">
+            <a href="#">Menu</a>
+            <a href="#">stores</a>
+            <a href="#">About</a>
+        </nav>
+        <div class="header-icons">
+            <button class="icon-btn" aria-label="Usuario">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+            </button>
+            <button class="icon-btn" aria-label="Filtros">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                    <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
+                </svg>
+            </button>
         </div>
-    </main>
-    <footer>
-        <p>Derechos reservados &copy; 2026 Varyon.com.br</p>
-        <p>Diseñado por <a href="https://www.varyon.com.br">Varyon.com.br</a></p>
-    </footer>
+    </header>
+
+    <div class="search-wrapper">
+        <div class="search-bar">
+            <input type="text" placeholder="Search" aria-label="Buscar">
+            <span class="search-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                </svg>
+            </span>
+        </div>
+    </div>
+
+    <section class="products-section">
+        <div class="product-grid">
+            <article class="product-card">
+                <a href="../productPage/producto.html?id=2" class="product-card-link">
+                    <span class="store-badge store-mercado">mercado livre</span>
+                    <div class="product-image">
+                        <img src="https://placehold.co/200x200/f0f0f0/333?text=RC+Car" alt="Producto">
+                    </div>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                </a>
+            </article>
+            <article class="product-card">
+                <a href="../productPage/producto.html?id=1" class="product-card-link">
+                    <span class="store-badge store-amazon">amazon</span>
+                    <div class="product-image">
+                        <img src="https://placehold.co/200x200/f0f0f0/333?text=Smartphone" alt="Producto">
+                    </div>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                </a>
+            </article>
+            <article class="product-card">
+                <a href="../productPage/producto.html?id=2" class="product-card-link">
+                    <span class="store-badge store-mercado">mercado livre</span>
+                    <div class="product-image">
+                        <img src="https://placehold.co/200x200/f0f0f0/333?text=RC+Car" alt="Producto">
+                    </div>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                </a>
+            </article>
+            <article class="product-card">
+                <a href="../productPage/producto.html?id=1" class="product-card-link">
+                    <span class="store-badge store-amazon">amazon</span>
+                    <div class="product-image">
+                        <img src="https://placehold.co/200x200/f0f0f0/333?text=Smartphone" alt="Producto">
+                    </div>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                    <p class="product-desc">XXXXXXXXXXXXXXXXXXXXXXX</p>
+                </a>
+            </article>
+        </div>
+    </section>
+
+    <script src="index.js"></script>
 </body>
 </html>
