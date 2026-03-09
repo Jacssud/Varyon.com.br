@@ -1,9 +1,9 @@
 ---
 interface Props {
-  variant?: 'index' | 'product';
+  variant?: 'index' | 'product' | 'admin';
 }
 const { variant = 'index' } = Astro.props;
-const logoHref = variant === 'product' ? '/' : '#';
+const logoHref = variant === 'index' ? '/' : '/';
 ---
 
 <header class:list={['navbar', variant === 'product' && 'navbar-with-search']}>
@@ -29,9 +29,22 @@ const logoHref = variant === 'product' ? '/' : '#';
   </a>
 
   <nav class="nav-links">
-    <a href="/">Menu</a>
+    <!-- Menú desplegable por categorías -->
+    <div class="nav-dropdown" id="nav-menu">
+      <button class="nav-dropdown-trigger" aria-expanded="false" aria-haspopup="true">
+        Menu
+        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="chevron">
+          <path d="M7 10l5 5 5-5z"/>
+        </svg>
+      </button>
+      <ul class="dropdown-list" id="dropdown-categories" role="menu">
+        <li class="dropdown-loading">Carregando...</li>
+      </ul>
+    </div>
+
     <a href="#">Stores</a>
     <a href="#">About</a>
+    <a href="/admin" class:list={['nav-admin', variant === 'admin' && 'active']}>Admin</a>
   </nav>
 
   <div class="header-icons">
@@ -53,7 +66,164 @@ const logoHref = variant === 'product' ? '/' : '#';
   </div>
 </header>
 
+<!-- Menú dinámico: carga categorías desde la API -->
+<script>
+  const API = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:8080';
+
+  async function loadMenu() {
+    const list = document.getElementById('dropdown-categories');
+    if (!list) return;
+
+    try {
+      const [catsRes, prodsRes] = await Promise.all([
+        fetch(`${API}/api/products/categories`),
+        fetch(`${API}/api/products`),
+      ]);
+
+      const categories: string[] = await catsRes.json();
+      const products: Array<{ id: number; name: string; category?: string }> = await prodsRes.json();
+
+      if (categories.length === 0) {
+        list.innerHTML = '<li class="dropdown-empty">Sin categorías</li>';
+        return;
+      }
+
+      list.innerHTML = categories.map(cat => {
+        const catProducts = products.filter(p => p.category === cat);
+        const items = catProducts.map(p =>
+          `<li role="menuitem"><a href="/product/${p.id}" class="dropdown-product">${p.name}</a></li>`
+        ).join('');
+        return `
+          <li class="dropdown-category" role="none">
+            <span class="cat-label">${cat}</span>
+            <ul class="cat-products">${items}</ul>
+          </li>`;
+      }).join('');
+    } catch {
+      const list = document.getElementById('dropdown-categories');
+      if (list) list.innerHTML = '<li class="dropdown-empty">API offline</li>';
+    }
+  }
+
+  // Toggle abre/cierra
+  const trigger = document.querySelector('.nav-dropdown-trigger') as HTMLButtonElement;
+  const dropdown = document.getElementById('nav-menu');
+
+  trigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = dropdown?.classList.toggle('open');
+    trigger.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  // Cierra al clickear fuera
+  document.addEventListener('click', () => {
+    dropdown?.classList.remove('open');
+    trigger?.setAttribute('aria-expanded', 'false');
+  });
+
+  loadMenu();
+</script>
+
 <style>
+  /* Dropdown menú */
+  .nav-dropdown { position: relative; }
+
+  .nav-dropdown-trigger {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.95);
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    font-family: inherit;
+  }
+
+  .nav-dropdown-trigger:hover { color: #fff; }
+
+  .chevron {
+    transition: transform 0.2s;
+  }
+
+  .nav-dropdown.open .chevron {
+    transform: rotate(180deg);
+  }
+
+  .dropdown-list {
+    display: none;
+    position: absolute;
+    top: calc(100% + 0.75rem);
+    left: 0;
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    min-width: 220px;
+    padding: 0.5rem 0;
+    list-style: none;
+    margin: 0;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .nav-dropdown.open .dropdown-list { display: block; }
+
+  .dropdown-loading,
+  .dropdown-empty {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .dropdown-category { padding: 0.4rem 0; }
+
+  .cat-label {
+    display: block;
+    padding: 0.35rem 1rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #2563eb;
+  }
+
+  .cat-products {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dropdown-product {
+    display: block;
+    padding: 0.4rem 1rem 0.4rem 1.5rem;
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .dropdown-product:hover {
+    background: rgba(37,99,235,0.2);
+    color: #fff;
+  }
+
+  .dropdown-category + .dropdown-category {
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
+
+  /* Admin link */
+  .nav-admin {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem !important;
+  }
+  .nav-admin:hover, .nav-admin.active { opacity: 1; background: rgba(255,255,255,0.1); }
+
+  /* Search inline (variant product) */
   .navbar-with-search .header-icons {
     display: flex;
     flex-direction: row;

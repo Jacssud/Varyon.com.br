@@ -11,4 +11,5 @@ export interface Product {
   description: string[];
   youtubeIds: string[];
   tags: string[];
+  category?: string;
 }

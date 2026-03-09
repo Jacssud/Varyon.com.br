@@ -1,0 +1,591 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Navbar from '../../components/Navbar.astro';
+---
+
+<BaseLayout title="VARYON - Admin" bodyClass="page-admin">
+  <Navbar variant="admin" />
+
+  <main class="admin-main">
+    <div class="admin-header">
+      <h1>Panel de administración</h1>
+      <button id="btn-new" class="btn-primary">+ Novo produto</button>
+    </div>
+
+    <!-- Tabla de productos -->
+    <section class="admin-section">
+      <h2>Produtos</h2>
+      <div id="products-table-wrap">
+        <p class="loading-msg">Carregando produtos...</p>
+      </div>
+    </section>
+
+    <!-- Formulario (oculto por defecto) -->
+    <section class="admin-section" id="form-section" style="display:none">
+      <h2 id="form-title">Novo produto</h2>
+
+      <form id="product-form" novalidate>
+        <input type="hidden" id="field-id" />
+
+        <div class="form-grid">
+          <!-- Nombre -->
+          <div class="field full">
+            <label for="field-name">Nome *</label>
+            <input type="text" id="field-name" required placeholder="Ex: Samsung Galaxy A55" />
+          </div>
+
+          <!-- Categoría -->
+          <div class="field">
+            <label for="field-category">Categoria *</label>
+            <div class="input-combo">
+              <select id="field-category-select">
+                <option value="">— Nova categoria —</option>
+              </select>
+              <input type="text" id="field-category" placeholder="ou escreva uma nova" />
+            </div>
+          </div>
+
+          <!-- Store -->
+          <div class="field">
+            <label for="field-store">Loja *</label>
+            <select id="field-store">
+              <option value="amazon">Amazon</option>
+              <option value="mercado">Mercado Livre</option>
+              <option value="aliexpress">AliExpress</option>
+            </select>
+          </div>
+
+          <!-- Store Label -->
+          <div class="field">
+            <label for="field-store-label">Badge da loja *</label>
+            <input type="text" id="field-store-label" placeholder="Ex: amazon" />
+          </div>
+
+          <!-- Link -->
+          <div class="field full">
+            <label for="field-link">Link de compra *</label>
+            <input type="url" id="field-link" placeholder="https://amzn.to/..." />
+          </div>
+
+          <!-- Imagen -->
+          <div class="field full">
+            <label for="field-image">URL da imagem *</label>
+            <input type="url" id="field-image" placeholder="https://..." />
+            <img id="image-preview" src="" alt="preview" style="display:none" />
+          </div>
+
+          <!-- Alt -->
+          <div class="field full">
+            <label for="field-alt">Texto alternativo da imagem</label>
+            <input type="text" id="field-alt" placeholder="Descrição da imagem para acessibilidade" />
+          </div>
+
+          <!-- Descripción dinámica -->
+          <div class="field full">
+            <label>Descrição (linhas)</label>
+            <div id="description-list" class="dynamic-list"></div>
+            <button type="button" class="btn-add-item" data-target="description">+ Adicionar linha</button>
+          </div>
+
+          <!-- YouTube IDs dinámico -->
+          <div class="field full">
+            <label>YouTube Video IDs (máx. 2)</label>
+            <div id="youtube-list" class="dynamic-list"></div>
+            <button type="button" class="btn-add-item" data-target="youtube">+ Adicionar vídeo</button>
+          </div>
+
+          <!-- Tags dinámicas -->
+          <div class="field full">
+            <label>Tags (para busca)</label>
+            <div id="tags-list" class="dynamic-list"></div>
+            <button type="button" class="btn-add-item" data-target="tags">+ Adicionar tag</button>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="btn-cancel" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btn-submit">Salvar produto</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  const API = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:8080';
+
+  // ── Tipos ──────────────────────────────────────────────
+  interface Product {
+    id?: number;
+    name: string;
+    store: string;
+    storeLabel: string;
+    link: string;
+    image: string;
+    alt: string;
+    description: string[];
+    youtubeIds: string[];
+    tags: string[];
+    category?: string;
+  }
+
+  // ── Estado ─────────────────────────────────────────────
+  let products: Product[] = [];
+  let categories: string[] = [];
+  let editingId: number | null = null;
+
+  // ── Elementos ──────────────────────────────────────────
+  const tableWrap    = document.getElementById('products-table-wrap')!;
+  const formSection  = document.getElementById('form-section')!;
+  const formTitle    = document.getElementById('form-title')!;
+  const form         = document.getElementById('product-form') as HTMLFormElement;
+  const btnNew       = document.getElementById('btn-new')!;
+  const btnCancel    = document.getElementById('btn-cancel')!;
+  const catSelect    = document.getElementById('field-category-select') as HTMLSelectElement;
+  const catInput     = document.getElementById('field-category') as HTMLInputElement;
+  const imageInput   = document.getElementById('field-image') as HTMLInputElement;
+  const imagePreview = document.getElementById('image-preview') as HTMLImageElement;
+
+  // ── API ────────────────────────────────────────────────
+  async function fetchProducts() {
+    const res = await fetch(`${API}/api/products`);
+    products = await res.json();
+  }
+
+  async function fetchCategories() {
+    const res = await fetch(`${API}/api/products/categories`);
+    categories = await res.json();
+    catSelect.innerHTML = '<option value="">— Nova categoria —</option>' +
+      categories.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  async function saveProduct(data: Product) {
+    const url  = editingId ? `${API}/api/products/${editingId}` : `${API}/api/products`;
+    const method = editingId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function deleteProduct(id: number) {
+    await fetch(`${API}/api/products/${id}`, { method: 'DELETE' });
+  }
+
+  // ── Render tabla ───────────────────────────────────────
+  function renderTable() {
+    if (products.length === 0) {
+      tableWrap.innerHTML = '<p class="loading-msg">Nenhum produto cadastrado.</p>';
+      return;
+    }
+    tableWrap.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th><th>Imagem</th><th>Nome</th><th>Categoria</th><th>Loja</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(p => `
+            <tr>
+              <td>${p.id}</td>
+              <td><img src="${p.image}" alt="${p.alt}" class="table-thumb" /></td>
+              <td>${p.name}</td>
+              <td><span class="cat-chip">${p.category ?? '—'}</span></td>
+              <td><span class="store-chip store-${p.store}">${p.storeLabel}</span></td>
+              <td class="actions">
+                <button class="btn-edit" data-id="${p.id}">Editar</button>
+                <button class="btn-delete" data-id="${p.id}">Excluir</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+
+    tableWrap.querySelectorAll<HTMLButtonElement>('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', () => openEdit(Number(btn.dataset.id)));
+    });
+    tableWrap.querySelectorAll<HTMLButtonElement>('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', () => confirmDelete(Number(btn.dataset.id)));
+    });
+  }
+
+  // ── Lista dinámica (descripción, youtube, tags) ────────
+  function addDynamicItem(listId: string, value = '') {
+    const list = document.getElementById(listId)!;
+    const row = document.createElement('div');
+    row.className = 'dynamic-row';
+    row.innerHTML = `
+      <input type="text" class="dynamic-input" value="${value}" placeholder="..." />
+      <button type="button" class="btn-remove-item">✕</button>`;
+    row.querySelector('.btn-remove-item')!.addEventListener('click', () => row.remove());
+    list.appendChild(row);
+  }
+
+  function getDynamicValues(listId: string): string[] {
+    return Array.from(
+      document.querySelectorAll<HTMLInputElement>(`#${listId} .dynamic-input`)
+    ).map(i => i.value.trim()).filter(Boolean);
+  }
+
+  function clearDynamic(listId: string) {
+    document.getElementById(listId)!.innerHTML = '';
+  }
+
+  // ── Formulario ─────────────────────────────────────────
+  function openNew() {
+    editingId = null;
+    form.reset();
+    formTitle.textContent = 'Novo produto';
+    document.getElementById('field-id')!.setAttribute('value', '');
+    ['description-list','youtube-list','tags-list'].forEach(clearDynamic);
+    addDynamicItem('description-list');
+    formSection.style.display = 'block';
+    formSection.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function openEdit(id: number) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    editingId = id;
+    formTitle.textContent = 'Editar produto';
+
+    (document.getElementById('field-id') as HTMLInputElement).value = String(id);
+    (document.getElementById('field-name') as HTMLInputElement).value = p.name;
+    (document.getElementById('field-store') as HTMLSelectElement).value = p.store;
+    (document.getElementById('field-store-label') as HTMLInputElement).value = p.storeLabel;
+    (document.getElementById('field-link') as HTMLInputElement).value = p.link;
+    (document.getElementById('field-image') as HTMLInputElement).value = p.image;
+    (document.getElementById('field-alt') as HTMLInputElement).value = p.alt;
+    catInput.value = p.category ?? '';
+    catSelect.value = categories.includes(p.category ?? '') ? (p.category ?? '') : '';
+
+    ['description-list','youtube-list','tags-list'].forEach(clearDynamic);
+    (p.description ?? []).forEach(v => addDynamicItem('description-list', v));
+    (p.youtubeIds ?? []).forEach(v => addDynamicItem('youtube-list', v));
+    (p.tags ?? []).forEach(v => addDynamicItem('tags-list', v));
+
+    showPreview(p.image);
+    formSection.style.display = 'block';
+    formSection.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function closeForm() {
+    formSection.style.display = 'none';
+    editingId = null;
+  }
+
+  async function confirmDelete(id: number) {
+    const p = products.find(x => x.id === id);
+    if (!confirm(`Excluir "${p?.name}"?`)) return;
+    await deleteProduct(id);
+    await reload();
+  }
+
+  function showPreview(url: string) {
+    if (url) {
+      imagePreview.src = url;
+      imagePreview.style.display = 'block';
+    } else {
+      imagePreview.style.display = 'none';
+    }
+  }
+
+  // ── Sync categoría select→input ────────────────────────
+  catSelect.addEventListener('change', () => {
+    if (catSelect.value) catInput.value = catSelect.value;
+  });
+  catInput.addEventListener('input', () => {
+    if (!categories.includes(catInput.value)) catSelect.value = '';
+  });
+
+  // Preview imagen
+  imageInput.addEventListener('input', () => showPreview(imageInput.value));
+
+  // Botones add dinámico
+  document.querySelectorAll<HTMLButtonElement>('.btn-add-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target!;
+      const maxItems = target === 'youtube' ? 2 : 99;
+      const listId = target === 'youtube' ? 'youtube-list' : target === 'description' ? 'description-list' : 'tags-list';
+      if (document.querySelectorAll(`#${listId} .dynamic-row`).length < maxItems) {
+        addDynamicItem(listId);
+      } else {
+        alert(`Máximo de ${maxItems} itens.`);
+      }
+    });
+  });
+
+  // Submit
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn-submit') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    const category = catInput.value.trim() || undefined;
+
+    const data: Product = {
+      name:        (document.getElementById('field-name') as HTMLInputElement).value.trim(),
+      store:       (document.getElementById('field-store') as HTMLSelectElement).value,
+      storeLabel:  (document.getElementById('field-store-label') as HTMLInputElement).value.trim(),
+      link:        (document.getElementById('field-link') as HTMLInputElement).value.trim(),
+      image:       (document.getElementById('field-image') as HTMLInputElement).value.trim(),
+      alt:         (document.getElementById('field-alt') as HTMLInputElement).value.trim(),
+      description: getDynamicValues('description-list'),
+      youtubeIds:  getDynamicValues('youtube-list'),
+      tags:        getDynamicValues('tags-list'),
+      category,
+    };
+
+    try {
+      await saveProduct(data);
+      await reload();
+      closeForm();
+    } catch (err) {
+      alert('Erro ao salvar: ' + err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar produto';
+    }
+  });
+
+  btnNew.addEventListener('click', openNew);
+  btnCancel.addEventListener('click', closeForm);
+
+  // ── Init ───────────────────────────────────────────────
+  async function reload() {
+    await Promise.all([fetchProducts(), fetchCategories()]);
+    renderTable();
+  }
+
+  reload();
+</script>
+
+<style>
+  .page-admin { background: #f5f5f5; }
+
+  .admin-main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  .admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+
+  .admin-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+  }
+
+  .admin-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  .admin-section h2 {
+    margin: 0 0 1.25rem;
+    font-size: 1.1rem;
+    color: #333;
+  }
+
+  .loading-msg { color: #888; font-size: 0.9rem; }
+
+  /* Tabla */
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .admin-table th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    background: #f0f0f0;
+    color: #555;
+    font-weight: 600;
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  .admin-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+  }
+
+  .table-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: #f5f5f5;
+  }
+
+  .cat-chip {
+    background: #ede9fe;
+    color: #5b21b6;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .store-chip {
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .store-amazon  { background: #fff8e1; color: #b45309; }
+  .store-mercado { background: #fef9c3; color: #854d0e; }
+  .store-aliexpress { background: #fee2e2; color: #b91c1c; }
+
+  .actions { display: flex; gap: 0.5rem; }
+
+  /* Botones */
+  .btn-primary {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    padding: 0.55rem 1.1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 0.55rem 1.1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-secondary:hover { background: #e5e7eb; }
+
+  .btn-edit {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: none;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .btn-edit:hover { background: #bae6fd; }
+
+  .btn-delete {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: none;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .btn-delete:hover { background: #fecaca; }
+
+  /* Formulario */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 0.35rem; }
+  .field.full { grid-column: 1 / -1; }
+
+  .field label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .field input,
+  .field select {
+    padding: 0.55rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.15s;
+    background: #fff;
+  }
+
+  .field input:focus,
+  .field select:focus { border-color: #2563eb; }
+
+  #image-preview {
+    margin-top: 0.5rem;
+    max-width: 120px;
+    max-height: 120px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .input-combo { display: flex; gap: 0.5rem; }
+  .input-combo select, .input-combo input { flex: 1; }
+
+  /* Listas dinámicas */
+  .dynamic-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.5rem; }
+
+  .dynamic-row { display: flex; gap: 0.4rem; align-items: center; }
+  .dynamic-input { flex: 1; }
+
+  .btn-remove-item {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+  }
+  .btn-remove-item:hover { background: #fee2e2; color: #b91c1c; }
+
+  .btn-add-item {
+    background: none;
+    border: 1px dashed #d1d5db;
+    color: #6b7280;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    width: fit-content;
+  }
+  .btn-add-item:hover { border-color: #2563eb; color: #2563eb; }
+
+  .form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .input-combo { flex-direction: column; }
+  }
+</style>
