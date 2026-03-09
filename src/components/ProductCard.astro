@@ -1,0 +1,29 @@
+---
+import type { Product } from '../types/product';
+
+interface Props {
+  product: Product;
+  linkTo: string;
+  external?: boolean;
+}
+const { product, linkTo, external = false } = Astro.props;
+const storeClass = `store-${product.store}`;
+---
+
+<article class="product-card" data-id={product.id}>
+  <a
+    href={linkTo}
+    class="product-card-link"
+    target={external ? '_blank' : '_self'}
+    rel={external ? 'noopener noreferrer' : undefined}
+  >
+    <span class:list={['store-badge', storeClass]}>{product.storeLabel}</span>
+    <div class="product-image">
+      <img src={product.image} alt={product.alt} loading="lazy" />
+    </div>
+    <p class="product-name">{product.name}</p>
+    {product.description.map(line => (
+      <p class="product-desc">{line}</p>
+    ))}
+  </a>
+</article>

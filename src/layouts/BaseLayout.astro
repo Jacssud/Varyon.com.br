@@ -1,0 +1,25 @@
+---
+interface Props {
+  title: string;
+  bodyClass?: string;
+}
+const { title, bodyClass = '' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Varyon Shop - os melhores produtos selecionados" />
+    <title>{title}</title>
+    <link rel="icon" type="image/jpeg" href="/img/logo-varyon.jpeg" />
+  </head>
+  <body class={bodyClass}>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  @import '../styles/global.css';
+</style>

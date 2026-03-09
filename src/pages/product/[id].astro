@@ -1,0 +1,203 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Navbar from '../../components/Navbar.astro';
+import YoutubeEmbed from '../../components/YoutubeEmbed.astro';
+import type { Product } from '../../types/product';
+
+const API_URL = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:8080';
+
+// En modo static, getStaticPaths pre-genera una página por producto
+export async function getStaticPaths() {
+  try {
+    const res = await fetch(
+      `${import.meta.env.PUBLIC_API_URL ?? 'http://localhost:8080'}/api/products`
+    );
+    if (!res.ok) return [];
+    const products: Product[] = await res.json();
+    return products.map(p => ({
+      params: { id: String(p.id) },
+      props: { product: p },
+    }));
+  } catch {
+    return [];
+  }
+}
+
+interface Props { product: Product }
+const { product } = Astro.props;
+
+// Selector: cargar todos los productos para el dropdown
+let allProducts: Product[] = [];
+try {
+  const res = await fetch(`${API_URL}/api/products`);
+  if (res.ok) allProducts = await res.json();
+} catch { /* silencioso */ }
+---
+
+<BaseLayout title={`VARYON - ${product.name}`} bodyClass="page-producto">
+  <Navbar variant="product" />
+
+  <div class="main-wrap">
+    <main class="content-producto">
+      <div class="grid-dinamica">
+
+        <!-- Columna 1: Producto -->
+        <div class="col-producto">
+          <div class="producto-selector">
+            <label for="product-selector">Produto:</label>
+            <select id="product-selector">
+              {allProducts.map(p => (
+                <option value={p.id} selected={p.id === product.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="product-card">
+            <span class:list={['store-badge', `store-${product.store}`]}>{product.storeLabel}</span>
+            <a href={product.link} target="_blank" rel="noopener noreferrer">
+              <div class="product-image">
+                <img src={product.image} alt={product.alt} />
+              </div>
+            </a>
+            <p class="product-name">{product.name}</p>
+            {product.description.map(line => (
+              <p class="product-desc">{line}</p>
+            ))}
+            <a href={product.link} target="_blank" rel="noopener noreferrer" class="btn-comprar">
+              Ver oferta ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- Columna 2: Gráficos decorativos -->
+        <div class="col-graficos">
+          <div class="card-viz">
+            <div class="viz-bars">
+              <span class="bar" style="--w: 70%"></span>
+              <span class="bar" style="--w: 45%"></span>
+              <span class="bar" style="--w: 85%"></span>
+            </div>
+            <div class="viz-radar">
+              <div class="radar-legend">
+                <span class="dot serie1"></span> Serie 1
+                <span class="dot serie2"></span> Serie 2
+                <span class="dot serie3"></span> Serie 3
+              </div>
+              <div class="radar-placeholder">
+                <svg viewBox="0 0 120 120" class="radar-svg">
+                  <circle cx="60" cy="60" r="45" fill="none" stroke="#d4d4d4" stroke-width="1"/>
+                  <circle cx="60" cy="60" r="35" fill="none" stroke="#d4d4d4" stroke-width="1"/>
+                  <circle cx="60" cy="60" r="25" fill="none" stroke="#d4d4d4" stroke-width="1"/>
+                  <line x1="60" y1="60" x2="60" y2="15" stroke="#ccc" stroke-width="1"/>
+                  <line x1="60" y1="60" x2="95" y2="45" stroke="#ccc" stroke-width="1"/>
+                  <line x1="60" y1="60" x2="95" y2="75" stroke="#ccc" stroke-width="1"/>
+                  <line x1="60" y1="60" x2="60" y2="105" stroke="#ccc" stroke-width="1"/>
+                  <line x1="60" y1="60" x2="25" y2="75" stroke="#ccc" stroke-width="1"/>
+                  <polygon points="60,25 75,42 72,65 48,68 33,48" fill="rgba(220,38,38,0.3)" stroke="#dc2626" stroke-width="1"/>
+                  <polygon points="60,35 68,48 65,62 55,58 45,45" fill="rgba(30,64,175,0.3)" stroke="#1e40af" stroke-width="1"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna 3: YouTube -->
+        <div class="col-youtube">
+          {product.youtubeIds.slice(0, 2).map(videoId => (
+            <div class="card-youtube">
+              <YoutubeEmbed videoId={videoId} />
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </main>
+    <aside class="sidebar-right"></aside>
+  </div>
+</BaseLayout>
+
+<!-- Selector navega al producto seleccionado -->
+<script>
+  document.getElementById('product-selector')?.addEventListener('change', (e) => {
+    const id = (e.target as HTMLSelectElement).value;
+    window.location.href = `/product/${id}`;
+  });
+</script>
+
+<style>
+  .page-producto { background: #efe7dd; }
+
+  .main-wrap { display: flex; min-height: calc(100vh - 80px); }
+
+  .content-producto { flex: 1; padding: 1.5rem; min-width: 0; }
+
+  .sidebar-right {
+    width: 48px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #b91c1c 0%, #7c2d12 50%, #4c1d95 100%);
+  }
+
+  .grid-dinamica {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1fr;
+    gap: 1.25rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .col-producto, .col-graficos, .col-youtube {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .producto-selector label { font-size: 0.75rem; color: #333; margin-right: 0.5rem; }
+  .producto-selector select {
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #999;
+    background: #fff;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .card-viz {
+    background: #d4d4d4;
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .viz-bars { display: flex; flex-direction: column; gap: 0.5rem; }
+  .viz-bars .bar {
+    height: 12px;
+    width: var(--w, 50%);
+    background: #1e3a5f;
+    border-radius: 6px;
+  }
+
+  .radar-legend { font-size: 0.7rem; color: #0a0a0a; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+  .serie1 { background: #dc2626; }
+  .serie2 { background: #1e40af; }
+
+  .radar-placeholder { width: 100%; max-width: 160px; margin: 0 auto; aspect-ratio: 1; }
+  .radar-svg { width: 100%; height: 100%; }
+
+  .card-youtube {
+    background: #d4d4d4;
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  @media (max-width: 900px) {
+    .grid-dinamica { grid-template-columns: 1fr 1fr; }
+    .col-producto { grid-column: 1 / -1; }
+  }
+  @media (max-width: 600px) {
+    .grid-dinamica { grid-template-columns: 1fr; }
+    .sidebar-right { width: 24px; }
+  }
+</style>
