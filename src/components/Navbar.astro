@@ -3,11 +3,10 @@ interface Props {
   variant?: 'index' | 'product' | 'admin';
 }
 const { variant = 'index' } = Astro.props;
-const logoHref = variant === 'index' ? '/' : '/';
 ---
 
-<header class:list={['navbar', variant === 'product' && 'navbar-with-search']}>
-  <a href={logoHref} class="logo-block">
+<header class="navbar">
+  <a href="/" class="logo-block">
     <div class="logo-icon">
       <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="40" height="40" rx="4" fill="#0a0a0a"/>
@@ -28,8 +27,8 @@ const logoHref = variant === 'index' ? '/' : '/';
     </div>
   </a>
 
-  <nav class="nav-links">
-    <!-- Menú desplegable por categorías -->
+  <!-- Nav desktop -->
+  <nav class="nav-links" id="nav-links">
     <div class="nav-dropdown" id="nav-menu">
       <button class="nav-dropdown-trigger" aria-expanded="false" aria-haspopup="true">
         Menu
@@ -47,186 +46,221 @@ const logoHref = variant === 'index' ? '/' : '/';
     <a href="/admin" class:list={['nav-admin', variant === 'admin' && 'active']}>Admin</a>
   </nav>
 
-  <div class="header-icons">
+  <div class="header-right">
     {variant === 'product' && (
       <div class="search-bar-inline">
-        <input type="text" id="navbar-search" placeholder="Search" aria-label="Buscar" />
+        <input type="text" id="navbar-search" placeholder="Buscar..." aria-label="Buscar" />
         <button type="button" class="search-btn-round" aria-label="Buscar">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
             <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
           </svg>
         </button>
       </div>
     )}
-    <button class="icon-btn" aria-label="Usuario">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-      </svg>
+
+    <!-- Hamburger (solo móvil) -->
+    <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false">
+      <span></span><span></span><span></span>
     </button>
   </div>
 </header>
 
-<!-- Menú dinámico: carga categorías desde la API -->
+<!-- Menú móvil -->
+<div class="mobile-menu" id="mobile-menu" aria-hidden="true">
+  <div class="mobile-menu-inner" id="mobile-menu-categories">
+    <p class="mobile-loading">Carregando...</p>
+  </div>
+  <div class="mobile-menu-links">
+    <a href="#">Stores</a>
+    <a href="#">About</a>
+    <a href="/admin">Admin</a>
+  </div>
+</div>
+
 <script>
   const API = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:8080';
 
+  // ── Cargar datos del menú ──────────────────────────────
   async function loadMenu() {
-    const list = document.getElementById('dropdown-categories');
-    if (!list) return;
-
     try {
       const [catsRes, prodsRes] = await Promise.all([
         fetch(`${API}/api/products/categories`),
         fetch(`${API}/api/products`),
       ]);
-
       const categories: string[] = await catsRes.json();
       const products: Array<{ id: number; name: string; category?: string }> = await prodsRes.json();
 
-      if (categories.length === 0) {
-        list.innerHTML = '<li class="dropdown-empty">Sin categorías</li>';
-        return;
+      // Desktop dropdown
+      const list = document.getElementById('dropdown-categories');
+      if (list) {
+        if (categories.length === 0) {
+          list.innerHTML = '<li class="dropdown-empty">Sin categorías</li>';
+        } else {
+          list.innerHTML = categories.map(cat => {
+            const items = products
+              .filter(p => p.category === cat)
+              .map(p => `<li role="menuitem"><a href="/product/${p.id}" class="dropdown-product">${p.name}</a></li>`)
+              .join('');
+            return `<li class="dropdown-category" role="none">
+              <span class="cat-label">${cat}</span>
+              <ul class="cat-products">${items}</ul>
+            </li>`;
+          }).join('');
+        }
       }
 
-      list.innerHTML = categories.map(cat => {
-        const catProducts = products.filter(p => p.category === cat);
-        const items = catProducts.map(p =>
-          `<li role="menuitem"><a href="/product/${p.id}" class="dropdown-product">${p.name}</a></li>`
-        ).join('');
-        return `
-          <li class="dropdown-category" role="none">
-            <span class="cat-label">${cat}</span>
-            <ul class="cat-products">${items}</ul>
-          </li>`;
-      }).join('');
+      // Mobile menu
+      const mobileInner = document.getElementById('mobile-menu-categories');
+      if (mobileInner) {
+        if (categories.length === 0) {
+          mobileInner.innerHTML = '';
+        } else {
+          mobileInner.innerHTML = categories.map(cat => {
+            const items = products
+              .filter(p => p.category === cat)
+              .map(p => `<a href="/product/${p.id}" class="mobile-product">${p.name}</a>`)
+              .join('');
+            return `<div class="mobile-category">
+              <span class="mobile-cat-label">${cat}</span>
+              ${items}
+            </div>`;
+          }).join('');
+        }
+      }
     } catch {
       const list = document.getElementById('dropdown-categories');
       if (list) list.innerHTML = '<li class="dropdown-empty">API offline</li>';
     }
   }
 
-  // Toggle abre/cierra
-  const trigger = document.querySelector('.nav-dropdown-trigger') as HTMLButtonElement;
+  // ── Desktop dropdown toggle ────────────────────────────
+  const trigger = document.querySelector('.nav-dropdown-trigger') as HTMLButtonElement | null;
   const dropdown = document.getElementById('nav-menu');
 
-  trigger?.addEventListener('click', (e) => {
+  trigger?.addEventListener('click', e => {
     e.stopPropagation();
-    const isOpen = dropdown?.classList.toggle('open');
-    trigger.setAttribute('aria-expanded', String(isOpen));
+    const open = dropdown?.classList.toggle('open');
+    trigger.setAttribute('aria-expanded', String(open));
   });
 
-  // Cierra al clickear fuera
   document.addEventListener('click', () => {
     dropdown?.classList.remove('open');
     trigger?.setAttribute('aria-expanded', 'false');
+  });
+
+  // ── Hamburger toggle ───────────────────────────────────
+  const hamburger = document.getElementById('hamburger');
+  const mobileMenu = document.getElementById('mobile-menu');
+
+  hamburger?.addEventListener('click', () => {
+    const open = mobileMenu?.classList.toggle('open');
+    hamburger.classList.toggle('active', !!open);
+    hamburger.setAttribute('aria-expanded', String(open));
+    mobileMenu?.setAttribute('aria-hidden', String(!open));
+  });
+
+  // Cierra menú móvil al hacer click en un link
+  mobileMenu?.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      mobileMenu.classList.remove('open');
+      hamburger?.classList.remove('active');
+    });
   });
 
   loadMenu();
 </script>
 
 <style>
-  /* Dropdown menú */
+  /* ── Desktop dropdown ─────────────────────────────── */
   .nav-dropdown { position: relative; }
 
   .nav-dropdown-trigger {
     background: none;
     border: none;
-    color: rgba(255,255,255,0.95);
-    font-size: 0.95rem;
+    color: rgba(255,255,255,0.92);
+    font-size: 0.9rem;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.2rem;
     padding: 0;
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     font-family: inherit;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    transition: color 0.2s;
   }
-
   .nav-dropdown-trigger:hover { color: #fff; }
 
-  .chevron {
-    transition: transform 0.2s;
-  }
-
-  .nav-dropdown.open .chevron {
-    transform: rotate(180deg);
-  }
+  .chevron { transition: transform 0.2s; }
+  .nav-dropdown.open .chevron { transform: rotate(180deg); }
 
   .dropdown-list {
     display: none;
     position: absolute;
-    top: calc(100% + 0.75rem);
+    top: calc(100% + 0.85rem);
     left: 0;
-    background: #1a1a2e;
+    background: #12122a;
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    min-width: 220px;
+    border-radius: 12px;
+    min-width: 230px;
     padding: 0.5rem 0;
     list-style: none;
     margin: 0;
-    z-index: 100;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 300;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
   }
-
   .nav-dropdown.open .dropdown-list { display: block; }
 
-  .dropdown-loading,
-  .dropdown-empty {
+  .dropdown-loading, .dropdown-empty {
     padding: 0.6rem 1rem;
     font-size: 0.8rem;
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.4);
   }
 
-  .dropdown-category { padding: 0.4rem 0; }
+  .dropdown-category { padding: 0.35rem 0; }
+  .dropdown-category + .dropdown-category { border-top: 1px solid rgba(255,255,255,0.07); }
 
   .cat-label {
     display: block;
-    padding: 0.35rem 1rem;
-    font-size: 0.7rem;
+    padding: 0.3rem 1rem;
+    font-size: 0.68rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #2563eb;
+    letter-spacing: 0.1em;
+    color: #60a5fa;
   }
 
-  .cat-products {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
+  .cat-products { list-style: none; margin: 0; padding: 0; }
 
   .dropdown-product {
     display: block;
     padding: 0.4rem 1rem 0.4rem 1.5rem;
     font-size: 0.82rem;
-    color: rgba(255,255,255,0.85);
+    color: rgba(255,255,255,0.82);
     text-decoration: none;
     transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
   }
+  .dropdown-product:hover { background: rgba(96,165,250,0.15); color: #fff; }
 
-  .dropdown-product:hover {
-    background: rgba(37,99,235,0.2);
-    color: #fff;
-  }
-
-  .dropdown-category + .dropdown-category {
-    border-top: 1px solid rgba(255,255,255,0.07);
-  }
-
-  /* Admin link */
+  /* ── Admin link ───────────────────────────────────── */
   .nav-admin {
-    font-size: 0.8rem;
-    opacity: 0.7;
+    font-size: 0.78rem;
+    opacity: 0.75;
     border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 4px;
-    padding: 0.2rem 0.5rem !important;
+    border-radius: 6px;
+    padding: 0.25rem 0.6rem !important;
   }
-  .nav-admin:hover, .nav-admin.active { opacity: 1; background: rgba(255,255,255,0.1); }
+  .nav-admin:hover, .nav-admin.active {
+    opacity: 1;
+    background: rgba(255,255,255,0.12);
+  }
 
-  /* Search inline (variant product) */
-  .navbar-with-search .header-icons {
+  /* ── Search inline (product) ──────────────────────── */
+  .header-right {
     display: flex;
-    flex-direction: row;
     align-items: center;
     gap: 0.75rem;
   }
@@ -234,31 +268,142 @@ const logoHref = variant === 'index' ? '/' : '/';
   .search-bar-inline {
     display: flex;
     align-items: center;
-    background: #fff;
-    border: 2px solid #0a0a0a;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
     border-radius: 999px;
     overflow: hidden;
+    transition: background 0.2s;
+  }
+  .search-bar-inline:focus-within {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.5);
   }
 
   .search-bar-inline input {
-    padding: 0.5rem 0.75rem;
+    padding: 0.45rem 0.75rem;
     border: none;
     background: none;
-    width: 140px;
-    font-size: 0.9rem;
+    width: 160px;
+    font-size: 0.85rem;
     outline: none;
-    color: #0a0a0a;
+    color: #fff;
   }
+  .search-bar-inline input::placeholder { color: rgba(255,255,255,0.5); }
 
   .search-btn-round {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border: none;
-    background: #fff;
-    color: #0a0a0a;
+    background: none;
+    color: rgba(255,255,255,0.8);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .search-btn-round:hover { color: #fff; }
+
+  /* ── Hamburger ────────────────────────────────────── */
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .hamburger span {
+    display: block;
+    height: 2px;
+    background: #fff;
+    border-radius: 2px;
+    transition: transform 0.25s, opacity 0.25s;
+    transform-origin: center;
+  }
+
+  .hamburger.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.active span:nth-child(2) { opacity: 0; }
+  .hamburger.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* ── Mobile menu ──────────────────────────────────── */
+  .mobile-menu {
+    display: none;
+    position: fixed;
+    top: 62px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #12122a;
+    z-index: 190;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem 2rem;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+
+  .mobile-menu.open {
+    transform: translateX(0);
+  }
+
+  .mobile-category {
+    margin-bottom: 1.25rem;
+  }
+
+  .mobile-cat-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #60a5fa;
+    margin-bottom: 0.5rem;
+  }
+
+  .mobile-product {
+    display: block;
+    padding: 0.55rem 0.5rem;
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: color 0.15s;
+  }
+  .mobile-product:hover { color: #fff; }
+
+  .mobile-menu-links {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .mobile-menu-links a {
+    display: block;
+    padding: 0.65rem 0.5rem;
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-size: 0.95rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: color 0.15s;
+  }
+  .mobile-menu-links a:hover { color: #fff; }
+
+  .mobile-loading {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.85rem;
+  }
+
+  /* ── Responsive ───────────────────────────────────── */
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .hamburger { display: flex; }
+    .mobile-menu { display: block; }
   }
 </style>
